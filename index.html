@@ -52,6 +52,36 @@
         font-size: 0.8em;
         color: #aaa;
       }
+      .auth-section {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        border: 1px solid #eee;
+      }
+      .user-info-section {
+        padding: 10px;
+      }
+      .login-prompt {
+        text-align: center;
+        padding: 20px;
+      }
+      .primary-button {
+        background-color: #5c2d91;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 10px;
+      }
+      .primary-button:hover {
+        background-color: #4a2577;
+      }
+      .authenticated-only {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -71,6 +101,26 @@
           <h3>Connection Status</h3>
           <p id="connection-status">Not connected to Pi Network services.</p>
           <p>This client is currently in development. Check back later for updates.</p>
+        </div>
+        
+        <!-- User authentication section - will be populated by renderer.js -->
+        <div id="auth-section" class="auth-section">
+          <!-- Login prompt for unauthenticated users -->
+          <div id="login-prompt" class="login-prompt">
+            <h3>Authentication Required</h3>
+            <p>Please log in to access your Pi Network account.</p>
+            <button id="login-button" class="primary-button">Log In</button>
+          </div>
+          
+          <!-- User info container - will be shown when authenticated -->
+          <div id="user-info-container" class="user-info-section" style="display: none;">
+            <h3>User Information</h3>
+            <p><strong>Username:</strong> <span id="user-username">-</span></p>
+            <p><strong>Pi Balance:</strong> <span id="user-balance">0.0</span> π</p>
+            <p><strong>Account Type:</strong> <span id="user-type">Standard</span></p>
+            <p><strong>Member Since:</strong> <span id="user-member-since">Unknown</span></p>
+            <button id="logout-button" class="primary-button">Log Out</button>
+          </div>
         </div>
         
         <h3>Getting Started</h3>

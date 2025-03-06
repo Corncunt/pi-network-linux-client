@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, shell } = require('electron');
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld(
   {
     // Get application version from the main process
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+    
+    // General utility methods
+    // Moved openExternalLink to piAuth namespace
     
     // Example: Pi Network specific methods would be added here
     // For instance:
@@ -31,6 +34,30 @@ contextBridge.exposeInMainWorld(
         ipcRenderer.removeListener(channel, callback);
       }
     }
+  }
+});
+
+// Expose authentication methods in a separate namespace
+contextBridge.exposeInMainWorld(
+  'piAuth',
+  {
+    // Authentication methods
+    login: (username, password) => ipcRenderer.invoke('auth-login', username, password),
+    logout: () => ipcRenderer.invoke('auth-logout'),
+    checkAuthStatus: () => ipcRenderer.invoke('auth-check-status'),
+    
+    // Listen for authentication status changes
+    onAuthStatusChange: (callback) => {
+      ipcRenderer.on('auth-status-change', (event, ...args) => callback(...args));
+    },
+    
+    // Remove authentication status listener
+    removeAuthStatusListener: (callback) => {
+      ipcRenderer.removeListener('auth-status-change', callback);
+    },
+    
+    // Open external links securely through the main process
+    openExternalLink: (url) => ipcRenderer.invoke('open-external-link', url)
   }
 );
 

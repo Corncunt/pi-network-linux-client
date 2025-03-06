@@ -21,8 +21,12 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "commander": "^13.1.0",
     "electron": "^28.1.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.3",
+    "winston": "^3.17.0"
   },
   "build": {
     "appId": "com.unofficial.pi-network-linux",
@@ -35,5 +39,8 @@
       ],
       "category": "Finance"
     }
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0"
   }
 }

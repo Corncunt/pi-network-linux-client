@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi Network Linux - Login</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+        
+        .login-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 320px;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: #5C4CDF;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            border-color: #5C4CDF;
+            outline: none;
+        }
+        
+        button {
+            background-color: #5C4CDF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 12px;
+            width: 100%;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #4a3dd4;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        .forgot-password {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        .forgot-password a {
+            color: #5C4CDF;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <img src="./assets/pi-logo.png" alt="Pi Network Logo" class="logo" onerror="this.src='https://minepi.com/static/favicon.png'; this.onerror=null;">
+            <h1>Pi Network</h1>
+            <p>Linux Client</p>
+        </div>
+        
+        <form id="login-form">
+            <div class="form-group">
+                <label for="username">Username or Email</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" id="login-button">Log In</button>
+            
+            <div class="error-message" id="error-message">
+                Invalid username or password. Please try again.
+            </div>
+        </form>
+        
+        <div class="forgot-password">
+            <a href="#" id="forgot-password-link">Forgot Password?</a>
+        </div>
+    </div>
+    
+    <script>
+        // Login form submission handler
+        document.getElementById('login-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            // Disable the login button and show loading state
+            const loginButton = document.getElementById('login-button');
+            const originalButtonText = loginButton.textContent;
+            loginButton.disabled = true;
+            loginButton.textContent = 'Logging in...';
+            
+            // Hide any previous error message
+            document.getElementById('error-message').style.display = 'none';
+            
+            // Get user credentials
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                // Call the authentication method from preload.js
+                const result = await window.piAuth.login(username, password);
+                
+                if (result.success) {
+                    console.log('Login successful!');
+                    // Redirect to main application page on success
+                    window.location.href = 'index.html';
+                } else {
+                    // Show error message
+                    const errorMessage = document.getElementById('error-message');
+                    errorMessage.textContent = result.message || 'Invalid username or password. Please try again.';
+                    errorMessage.style.display = 'block';
+                    
+                    // Reset login button
+                    loginButton.disabled = false;
+                    loginButton.textContent = originalButtonText;
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                
+                // Show generic error message
+                const errorMessage = document.getElementById('error-message');
+                errorMessage.textContent = 'An error occurred during login. Please try again later.';
+                errorMessage.style.display = 'block';
+                
+                // Reset login button
+                loginButton.disabled = false;
+                loginButton.textContent = originalButtonText;
+            }
+        });
+        
+        // Forgot password link handler
+        document.getElementById('forgot-password-link').addEventListener('click', (event) => {
+            event.preventDefault();
+            
+            // Open the Pi Network password reset page in the default browser
+            window.piAuth.openExternalLink('https://minepi.com/forgot-password');
+        });
+    </script>
+</body>
+</html>
+

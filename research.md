@@ -41,6 +41,65 @@ Pi Network is a digital cryptocurrency project that aims to make crypto mining a
 
 **Description**: This section will document the API endpoints used by the Pi Network application to interact with its backend services.
 
+### Current Research Progress
+
+We have initiated a systematic approach to discover and document the Pi Network API endpoints. Our current findings and methodologies are as follows:
+
+#### Approach to API Discovery
+
+1. **Network Traffic Analysis**: We have developed tools to intercept and analyze network traffic between the Pi Network application and its backend servers.
+2. **Binary Analysis**: Examining the macOS application binaries for hardcoded API endpoints, URLs, and request patterns.
+3. **User Interaction Flow Mapping**: Documenting the API calls triggered by specific user interactions to understand the relationship between UI elements and backend services.
+4. **Response Structure Analysis**: Analyzing the structure of API responses to understand data models and relationships.
+
+#### Tools Developed for Network Analysis
+
+We have created a `network-traffic-analyzer.js` script that:
+- Sets up a proxy server to intercept network traffic
+- Logs all requests and responses in a structured JSON format
+- Provides filtering capabilities to focus on specific endpoints
+- Categorizes requests by functionality (auth, wallet, mining, etc.)
+- Flags potential authentication tokens and sensitive data
+
+This tool will help us systematically map out the entire API surface of the Pi Network.
+
+#### Initial API Structure Assumptions
+
+Based on our preliminary analysis and the API client structure we've developed, we believe the Pi Network API is organized around these core functionalities:
+
+1. **Authentication**: OAuth-based authentication flow with refresh tokens
+2. **User Management**: Profile, settings, and account management
+3. **Wallet Operations**: Balance checking, transactions, and history
+4. **Mining/Earning**: Session management, rate calculation, and rewards
+5. **Social Features**: Security circles, invitations, and social graph management
+
+Our initial API client implementation reflects this presumed structure, with dedicated modules for each area of functionality.
+
+#### Information Still Needed
+
+We still need to discover:
+- The exact base URL(s) for the production API servers
+- Authentication flow details (request format, tokens, session management)
+- Required HTTP headers and security measures (CSRF tokens, etc.)
+- Rate limiting implementations and quotas
+- Error handling patterns and status codes
+- Versioning strategy for the API
+- Potential differences between mobile and desktop API implementations
+
+#### Documentation Plan
+
+Once endpoints are discovered, we will document each one using this structure:
+1. **Endpoint**: Full URL path
+2. **Method**: HTTP method (GET, POST, etc.)
+3. **Authentication**: Required authentication tokens or methods
+4. **Parameters**: Query parameters and body payload format
+5. **Response**: Example response with data structure
+6. **Error Codes**: Possible error responses
+7. **Rate Limits**: Any known request limits
+8. **Notes**: Additional observations or implementation details
+
+This documentation will be maintained alongside our code implementation to ensure consistency.
+
 **To gather**:
 - Base URL(s) for the API
 - Authentication endpoints

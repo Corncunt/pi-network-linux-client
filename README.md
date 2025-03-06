@@ -6,6 +6,8 @@ This project aims to create an unofficial Linux client for Pi Network, enabling 
 
 Since Pi Network doesn't officially support Linux, this project reverse engineers the existing macOS/Windows applications to create a compatible Linux version using Electron, providing similar functionality while respecting Pi Network's terms of service.
 
+The project includes a modular API client structure and network traffic analysis tools to help with reverse engineering the Pi Network application protocol.
+
 ### Key Features (Planned)
 
 - User authentication and account management
@@ -103,8 +105,17 @@ pi-network-linux/
 ├── research.md             # Documentation of Pi Network research findings
 ├── development-plan.md     # Project development plan and roadmap
 ├── setup.sh                # Environment setup script
+├── src/                    # Application source code
+│   └── api/                # API client modules
+│       ├── index.js        # Main API client initialization
+│       ├── auth.js         # Authentication-related endpoints
+│       ├── user.js         # User profile and account endpoints
+│       ├── wallet.js       # Cryptocurrency wallet endpoints
+│       ├── mining.js       # Mining/earning mechanism endpoints
+│       └── social.js       # Security circles and social features
 ├── reverse-engineering/    # Reverse engineering documentation and tools
-│   └── network-analysis.md # Guide for analyzing network traffic
+│   ├── network-analysis.md           # Guide for analyzing network traffic
+│   └── network-traffic-analyzer.js   # Tool for capturing and analyzing API calls
 └── assets/                 # Images, icons, and other static assets
 ```
 
@@ -179,4 +190,30 @@ Use at your own risk. This project does not guarantee:
 - Compliance with all Pi Network terms of service
 
 **All Pi Network logos, trademarks, and assets are the property of their respective owners.**
+
+## Current Progress and Next Steps
+
+### Completed
+- Basic Electron application structure
+- Modular API client architecture with placeholders for all main Pi Network features
+- Network traffic analyzer for reverse engineering the Pi Network protocol
+- Development environment setup and project documentation
+
+### API Client Structure
+The project implements a modular API client with the following components:
+- **Main API Client** (`src/api/index.js`): Handles configuration, authentication headers, and exports all API modules
+- **Authentication** (`src/api/auth.js`): Endpoints for login, registration, and session management
+- **User Profile** (`src/api/user.js`): Endpoints for user data and account settings
+- **Wallet** (`src/api/wallet.js`): Cryptocurrency wallet operations and transaction history
+- **Mining** (`src/api/mining.js`): Interfaces for the Pi mining/earning mechanism
+- **Social Features** (`src/api/social.js`): Security circles and invitation system
+
+### Coming Next
+- Complete API endpoint discovery through reverse engineering
+- Implementation of authentication and basic user functionality
+- UI development with React components
+- Testing across various Linux distributions
+- First beta release for community testing
+
+We welcome contributors to help with any of these upcoming tasks!
 

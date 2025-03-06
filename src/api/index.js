@@ -7,7 +7,6 @@
  * @module api
  */
 
-const axios = require('axios');
 const auth = require('./auth');
 const user = require('./user');
 const wallet = require('./wallet');
@@ -15,53 +14,15 @@ const mining = require('./mining');
 const social = require('./social');
 
 /**
- * Default configuration for the API client
- */
-const defaultConfig = {
-  baseURL: 'https://api.minepi.com/v1',
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
-};
-
-/**
  * PiNetworkAPI class to interact with the Pi Network API
  */
 class PiNetworkAPI {
   /**
    * Creates an instance of the Pi Network API client
-   * 
-   * @param {Object} config - Configuration options for the API client
-   * @param {string} config.baseURL - Base URL for the API
-   * @param {number} config.timeout - Request timeout in milliseconds
-   * @param {Object} config.headers - Default headers for all requests
+   * It uses the shared authClient from auth.js
    */
-  constructor(config = {}) {
-    this.config = { ...defaultConfig, ...config };
-    this.client = axios.create(this.config);
-    
-    // Intercept requests to add auth token if available
-    this.client.interceptors.request.use(request => {
-      const token = auth.getToken();
-      if (token) {
-        request.headers.Authorization = `Bearer ${token}`;
-      }
-      return request;
-    });
-    
-    // Intercept responses to handle common errors
-    this.client.interceptors.response.use(
-      response => response,
-      error => {
-        // Handle authentication errors
-        if (error.response && error.response.status === 401) {
-          auth.clearToken();
-        }
-        return Promise.reject(error);
-      }
-    );
+  constructor() {
+    // We no longer need to store the client as each module uses the shared authClient
     
     // Bind all API methods
     this.auth = this._bindMethods(auth);
@@ -72,7 +33,7 @@ class PiNetworkAPI {
   }
   
   /**
-   * Binds API methods to use the configured axios client
+   * Binds API methods to create a consistent interface
    * 
    * @private
    * @param {Object} module - API module with methods
@@ -81,8 +42,9 @@ class PiNetworkAPI {
   _bindMethods(module) {
     const bound = {};
     Object.keys(module).forEach(key => {
-      if (typeof module[key] === 'function') {
-        bound[key] = (...args) => module[key](this.client, ...args);
+      if (typeof module[key] === 'function' && key !== 'refreshTokens') {
+        // All modules now use shared authClient, so we don't need to pass the client
+        bound[key] = (...args) => module[key](...args);
       } else {
         bound[key] = module[key];
       }
@@ -91,7 +53,7 @@ class PiNetworkAPI {
   }
 }
 
-// Export a singleton instance with default config
+// Export a singleton instance
 const defaultInstance = new PiNetworkAPI();
 
 // Export the class for creating custom instances
@@ -100,13 +62,15 @@ module.exports = {
   api: defaultInstance,
   
   // Factory function for creating custom instances
-  createAPI: (config) => new PiNetworkAPI(config),
+  createAPI: () => new PiNetworkAPI(),
   
   // Export individual modules for direct access
   auth,
   user,
   wallet,
   mining,
-  social
+  social,
+  
+  // Export the shared authClient for direct use
+  authClient: auth.authClient
 };
-

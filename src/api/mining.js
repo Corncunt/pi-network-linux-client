@@ -5,6 +5,8 @@
  * @module api/mining
  */
 
+const { authClient } = require('./auth');
+
 /**
  * Start a mining session for the current user
  * 
@@ -15,11 +17,11 @@
  * @returns {Promise<Object>} - Information about the started mining session
  * @throws {Error} If the mining session could not be started
  */
-const startMiningSession = async (client, options = {}) => {
+const startMiningSession = async (options = {}) => {
   try {
     const { duration = 3600, enableNotifications = true } = options;
     
-    const response = await client.post('/mining/start', {
+    const response = await authClient.post('/mining/start', {
       duration,
       enableNotifications
     });
@@ -38,9 +40,9 @@ const startMiningSession = async (client, options = {}) => {
  * @returns {Promise<Object>} - Current mining status and earnings information
  * @throws {Error} If mining status could not be retrieved
  */
-const checkMiningStatus = async (client) => {
+const checkMiningStatus = async () => {
   try {
-    const response = await client.get('/mining/status');
+    const response = await authClient.get('/mining/status');
     return response.data;
   } catch (error) {
     console.error('Failed to check mining status:', error.message);
@@ -60,7 +62,7 @@ const checkMiningStatus = async (client) => {
  * @returns {Promise<Object>} - Mining history with pagination details
  * @throws {Error} If mining history could not be retrieved
  */
-const getMiningHistory = async (client, options = {}) => {
+const getMiningHistory = async (options = {}) => {
   try {
     const { 
       limit = 20, 
@@ -73,7 +75,7 @@ const getMiningHistory = async (client, options = {}) => {
     if (startDate) params.startDate = startDate;
     if (endDate) params.endDate = endDate;
     
-    const response = await client.get('/mining/history', { params });
+    const response = await authClient.get('/mining/history', { params });
     return response.data;
   } catch (error) {
     console.error('Failed to get mining history:', error.message);
@@ -88,9 +90,9 @@ const getMiningHistory = async (client, options = {}) => {
  * @returns {Promise<Object>} - Mining rate information including base rate and bonuses
  * @throws {Error} If mining rate could not be retrieved
  */
-const getMiningRate = async (client) => {
+const getMiningRate = async () => {
   try {
-    const response = await client.get('/mining/rate');
+    const response = await authClient.get('/mining/rate');
     return response.data;
   } catch (error) {
     console.error('Failed to get mining rate:', error.message);

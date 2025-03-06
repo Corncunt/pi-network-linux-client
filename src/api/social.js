@@ -6,6 +6,8 @@
  * @module api/social
  */
 
+const { authClient } = require('./auth');
+
 /**
  * Get the current user's security circle information
  * 
@@ -13,9 +15,9 @@
  * @returns {Promise<Object>} - Details about the user's security circle
  * @throws {Error} If security circle information could not be retrieved
  */
-const getSecurityCircle = async (client) => {
+const getSecurityCircle = async () => {
   try {
-    const response = await client.get('/social/security-circle');
+    const response = await authClient.get('/social/security-circle');
     return response.data;
   } catch (error) {
     console.error('Failed to get security circle information:', error.message);
@@ -31,9 +33,9 @@ const getSecurityCircle = async (client) => {
  * @returns {Promise<Object>} - Updated security circle information
  * @throws {Error} If the user could not be added to the security circle
  */
-const addToSecurityCircle = async (client, userId) => {
+const addToSecurityCircle = async (userId) => {
   try {
-    const response = await client.post('/social/security-circle/add', { userId });
+    const response = await authClient.post('/social/security-circle/add', { userId });
     return response.data;
   } catch (error) {
     console.error('Failed to add user to security circle:', error.message);
@@ -49,9 +51,9 @@ const addToSecurityCircle = async (client, userId) => {
  * @returns {Promise<Object>} - Updated security circle information
  * @throws {Error} If the user could not be removed from the security circle
  */
-const removeFromSecurityCircle = async (client, userId) => {
+const removeFromSecurityCircle = async (userId) => {
   try {
-    const response = await client.post('/social/security-circle/remove', { userId });
+    const response = await authClient.post('/social/security-circle/remove', { userId });
     return response.data;
   } catch (error) {
     console.error('Failed to remove user from security circle:', error.message);
@@ -70,9 +72,9 @@ const removeFromSecurityCircle = async (client, userId) => {
  * @returns {Promise<Object>} - Information about the sent invitation
  * @throws {Error} If the invitation could not be sent
  */
-const inviteUser = async (client, invitation) => {
+const inviteUser = async (invitation) => {
   try {
-    const response = await client.post('/social/invite', invitation);
+    const response = await authClient.post('/social/invite', invitation);
     return response.data;
   } catch (error) {
     console.error('Failed to send invitation:', error.message);
@@ -90,11 +92,11 @@ const inviteUser = async (client, invitation) => {
  * @returns {Promise<Object>} - List of pending invitations
  * @throws {Error} If invitations could not be retrieved
  */
-const getSentInvitations = async (client, options = {}) => {
+const getSentInvitations = async (options = {}) => {
   try {
     const { limit = 20, page = 1 } = options;
     
-    const response = await client.get('/social/invitations/sent', {
+    const response = await authClient.get('/social/invitations/sent', {
       params: { limit, page }
     });
     
@@ -115,11 +117,11 @@ const getSentInvitations = async (client, options = {}) => {
  * @returns {Promise<Object>} - List of received invitations
  * @throws {Error} If invitations could not be retrieved
  */
-const getReceivedInvitations = async (client, options = {}) => {
+const getReceivedInvitations = async (options = {}) => {
   try {
     const { limit = 20, page = 1 } = options;
     
-    const response = await client.get('/social/invitations/received', {
+    const response = await authClient.get('/social/invitations/received', {
       params: { limit, page }
     });
     
@@ -138,9 +140,9 @@ const getReceivedInvitations = async (client, options = {}) => {
  * @returns {Promise<Object>} - Updated invitation status
  * @throws {Error} If the invitation could not be accepted
  */
-const acceptInvitation = async (client, invitationId) => {
+const acceptInvitation = async (invitationId) => {
   try {
-    const response = await client.post('/social/invitations/accept', {
+    const response = await authClient.post('/social/invitations/accept', {
       invitationId
     });
     
@@ -159,9 +161,9 @@ const acceptInvitation = async (client, invitationId) => {
  * @returns {Promise<Object>} - Updated invitation status
  * @throws {Error} If the invitation could not be rejected
  */
-const rejectInvitation = async (client, invitationId) => {
+const rejectInvitation = async (invitationId) => {
   try {
-    const response = await client.post('/social/invitations/reject', {
+    const response = await authClient.post('/social/invitations/reject', {
       invitationId
     });
     

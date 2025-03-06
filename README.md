@@ -1,3 +1,280 @@
+# Pi Network API Integration
+
+## Overview
+
+This project provides a comprehensive Node.js integration with the Pi Network API, allowing developers to interact with Pi Network services including authentication, wallet operations, mining functionality, user management, and social features. The integration uses a centralized authentication client that handles token management across all API modules.
+
+## Architecture
+
+The API integration is structured with a modular approach:
+
+```
+src/api/
+├── auth.js        # Authentication & token management
+├── wallet.js      # Wallet operations (balance, transfers)
+├── mining.js      # Mining sessions & rewards
+├── user.js        # User profile & settings
+├── social.js      # Social connections & security circle
+└── index.js       # API aggregator
+```
+
+### Shared Authentication Client
+
+The core of the integration is the `authClient`, a pre-configured Axios instance that:
+
+- Manages authentication tokens
+- Automatically injects auth tokens into requests
+- Handles token refresh when expired
+- Provides consistent error handling
+
+All API modules use this shared client to ensure consistent authentication across the entire application.
+
+## API Modules
+
+### Authentication (auth.js)
+
+Handles user authentication, token management, and session control.
+
+**Key Functions:**
+
+- `login(username, password)` - Authenticate with Pi Network
+- `refreshToken(refreshToken)` - Refresh an expired access token
+- `logout()` - End the current session
+- `checkStatus()` - Verify authentication status
+
+### Wallet (wallet.js)
+
+Manages Pi cryptocurrency operations.
+
+**Key Functions:**
+
+- `getBalance()` - Retrieve current Pi balance
+- `getTransactions()` - List past transactions
+- `sendPi(recipient, amount, memo)` - Transfer Pi to another user
+- `getWalletAddress()` - Get the user's wallet address
+
+### Mining (mining.js)
+
+Controls Pi mining sessions and rewards.
+
+**Key Functions:**
+
+- `startSession()` - Begin a mining session
+- `checkRewards()` - Get information about earned rewards
+- `getMiningRate()` - Get the current mining rate
+- `getActiveMinerCount()` - Get the number of active miners
+- `checkMiningStatus()` - Check if the user is currently mining
+
+### User Management (user.js)
+
+Handles user profile data and settings.
+
+**Key Functions:**
+
+- `getProfile()` - Get the user's profile information
+- `updateProfile(data)` - Update profile information
+- `getAppSettings()` - Get application settings
+- `updateAppSettings(settings)` - Update application settings
+
+### Social (social.js)
+
+Manages social connections and security circles.
+
+**Key Functions:**
+
+- `getSecurityCircle()` - Get the user's security circle members
+- `addToSecurityCircle(username)` - Add a user to security circle
+- `removeFromSecurityCircle(username)` - Remove a user from security circle
+- `getInvites()` - Get pending invites
+
+## Token Management
+
+The integration handles authentication tokens securely:
+
+1. **Token Storage**: Tokens are stored securely and never exposed in the client-side code
+2. **Automatic Injection**: The `authClient` automatically injects tokens into request headers
+3. **Token Refresh**: When a token expires, the system automatically attempts to refresh it
+4. **Session Recovery**: If refresh fails, the user is prompted to reauthenticate
+
+```javascript
+// How token management works (simplified)
+authClient.interceptors.request.use(
+  async (config) => {
+    // Inject token into request headers
+    const token = getToken();
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  }
+);
+
+// Handle expired tokens
+authClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token expired, try to refresh
+      try {
+        await refreshToken();
+        // Retry the original request
+        return authClient(error.config);
+      } catch (refreshError) {
+        // Refresh failed, force re-login
+        clearTokens();
+        throw new Error('Session expired. Please login again.');
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
+## Usage Examples
+
+### Authentication
+
+```javascript
+const { auth } = require('./src/api');
+
+// Login
+async function loginUser(username, password) {
+  try {
+    const result = await auth.login(username, password);
+    console.log('Login successful!', result.user);
+    return result;
+  } catch (error) {
+    console.error('Login failed:', error.message);
+    throw error;
+  }
+}
+
+// Logout
+async function logoutUser() {
+  try {
+    await auth.logout();
+    console.log('Logout successful!');
+  } catch (error) {
+    console.error('Logout failed:', error.message);
+  }
+}
+```
+
+### Wallet Operations
+
+```javascript
+const { wallet } = require('./src/api');
+
+// Check balance
+async function checkBalance() {
+  try {
+    const balance = await wallet.getBalance();
+    console.log('Current balance:', balance.amount, 'Pi');
+    return balance;
+  } catch (error) {
+    console.error('Failed to get balance:', error.message);
+    throw error;
+  }
+}
+
+// Send Pi
+async function sendPayment(recipient, amount, memo = '') {
+  try {
+    const result = await wallet.sendPi(recipient, amount, memo);
+    console.log('Payment sent successfully!', result.transactionId);
+    return result;
+  } catch (error) {
+    console.error('Payment failed:', error.message);
+    throw error;
+  }
+}
+```
+
+### Mining
+
+```javascript
+const { mining } = require('./src/api');
+
+// Start mining
+async function startMining() {
+  try {
+    const session = await mining.startSession();
+    console.log('Mining session started:', session.id);
+    return session;
+  } catch (error) {
+    console.error('Failed to start mining:', error.message);
+    throw error;
+  }
+}
+
+// Check mining status
+async function checkMiningStatus() {
+  try {
+    const status = await mining.checkMiningStatus();
+    console.log('Mining active:', status.active);
+    console.log('Current rate:', status.rate, 'Pi/hour');
+    return status;
+  } catch (error) {
+    console.error('Failed to check mining status:', error.message);
+    throw error;
+  }
+}
+```
+
+## Testing the Integration
+
+1. **Set up credentials**:
+   Create a `.env` file with your Pi Network credentials (for testing only, never commit this file)
+   ```
+   PI_USERNAME=your_username
+   PI_PASSWORD=your_password
+   ```
+
+2. **Run the test script**:
+   ```
+   node src/test.js
+   ```
+
+3. **Check each module**:
+   The test script will try each of the main API functions and report success or failure.
+
+## Error Handling
+
+The integration provides consistent error handling across all modules:
+
+```javascript
+try {
+  const result = await wallet.sendPi('recipient', 1.0, 'Test payment');
+  // Handle success
+} catch (error) {
+  if (error.response) {
+    // The server responded with an error
+    console.error('API Error:', error.response.data.message);
+    
+    // Handle specific error codes
+    if (error.response.status === 401) {
+      // Authentication error
+    } else if (error.response.status === 400) {
+      // Invalid request
+    }
+  } else if (error.request) {
+    // No response received
+    console.error('Network Error: No response from server');
+  } else {
+    // Other error
+    console.error('Error:', error.message);
+  }
+}
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
 # Pi Network for Linux
 
 ## Project Overview

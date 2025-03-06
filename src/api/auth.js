@@ -1,147 +1,194 @@
-/**
- * Authentication API Module
- * 
- * Handles user authentication, registration, and token management.
- * 
- * @module api/auth
- */
+const axios = require('axios');
+const BASE_API_URL = 'https://api.minepi.com/v2';
 
-// In-memory token storage (would be replaced with secure storage in production)
+// Local storage/memory management of tokens
 let authToken = null;
+let refreshToken = null;
 
 /**
- * Get the stored authentication token
- * 
- * @returns {string|null} The authentication token if available
+ * Shared, pre-configured Axios client for Pi Network API
+ * This client automatically handles:
+ * - Adding authorization headers to requests
+ * - Refreshing tokens when they expire
+ * - Consistent error handling
  */
-const getToken = () => authToken;
+const authClient = axios.create({
+  baseURL: BASE_API_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
 
 /**
- * Store an authentication token
- * 
- * @param {string} token - The authentication token to store
+ * Request interceptor to automatically add authorization token to requests
  */
-const setToken = (token) => {
+authClient.interceptors.request.use(
+  async (config) => {
+    // If we have an auth token, add it to the request header
+    if (authToken) {
+      config.headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Response interceptor to handle token refresh when authorization fails
+ */
+authClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If error is 401 Unauthorized and we haven't already tried to refresh
+    if (error.response && 
+        error.response.status === 401 && 
+        !originalRequest._retry && 
+        refreshToken) {
+      
+      originalRequest._retry = true;
+      
+      try {
+        // Attempt to refresh the token
+        const response = await refreshAuthToken();
+        
+        // If successful, update the auth token and retry the original request
+        if (response && response.data && response.data.token) {
+          authToken = response.data.token;
+          originalRequest.headers['Authorization'] = `Bearer ${authToken}`;
+          return authClient(originalRequest);
+        }
+      } catch (refreshError) {
+        // If refresh fails, clear tokens and reject with original error
+        console.error('Token refresh failed:', refreshError);
+        clearTokens();
+        return Promise.reject(error);
+      }
+    }
+    
+    // If not a 401 or we've already tried to refresh, just reject with the error
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Set authentication tokens after successful login
+ * @param {string} token - The authentication token
+ * @param {string} refresh - The refresh token
+ */
+const setTokens = (token, refresh) => {
   authToken = token;
+  refreshToken = refresh;
 };
 
 /**
- * Clear the stored authentication token (logout)
+ * Clear authentication tokens on logout or auth failure
  */
-const clearToken = () => {
+const clearTokens = () => {
   authToken = null;
+  refreshToken = null;
 };
 
 /**
- * Log in with username and password
- * 
- * @param {Object} client - Axios client instance
+ * Get the current authentication token
+ * @returns {string|null} The current auth token
+ */
+const getAuthToken = () => {
+  return authToken;
+};
+
+/**
+ * Get the current refresh token
+ * @returns {string|null} The current refresh token
+ */
+const getRefreshToken = () => {
+  return refreshToken;
+};
+
+/**
+ * Attempt to refresh the authentication token using the refresh token
+ * @returns {Promise} The refresh API response
+ */
+const refreshAuthToken = async () => {
+  // Don't use the authClient for token refresh to avoid interceptor loops
+  return axios.post(`${BASE_API_URL}/auth/refresh`, {
+    refreshToken: refreshToken
+  });
+};
+
+/**
+ * Login to Pi Network
  * @param {string} username - User's username or email
  * @param {string} password - User's password
- * @returns {Promise<Object>} User data and authentication token
+ * @returns {Promise} The login API response
  */
-const login = async (client, username, password) => {
+const login = async (username, password) => {
   try {
-    const response = await client.post('/auth/login', { username, password });
-    if (response.data && response.data.token) {
-      setToken(response.data.token);
-    }
-    return response.data;
-  } catch (error) {
-    console.error('Login failed:', error.message);
-    throw error;
-  }
-};
-
-/**
- * Register a new user account
- * 
- * @param {Object} client - Axios client instance
- * @param {Object} userData - User registration data
- * @param {string} userData.username - Desired username
- * @param {string} userData.email - User's email address
- * @param {string} userData.password - User's password
- * @param {string} userData.phoneNumber - User's phone number
- * @returns {Promise<Object>} New user data and authentication token
- */
-const register = async (client, userData) => {
-  try {
-    const response = await client.post('/auth/register', userData);
-    if (response.data && response.data.token) {
-      setToken(response.data.token);
-    }
-    return response.data;
-  } catch (error) {
-    console.error('Registration failed:', error.message);
-    throw error;
-  }
-};
-
-/**
- * Verify a user's phone number with a code
- * 
- * @param {Object} client - Axios client instance
- * @param {string} phoneNumber - User's phone number
- * @param {string} verificationCode - Verification code received by SMS
- * @returns {Promise<Object>} Verification result
- */
-const verifyPhone = async (client, phoneNumber, verificationCode) => {
-  try {
-    const response = await client.post('/auth/verify-phone', {
-      phoneNumber,
-      verificationCode
+    const response = await authClient.post('/auth/login', {
+      username,
+      password
     });
+    
+    // Store tokens if login successful
+    if (response.data && response.data.token && response.data.refreshToken) {
+      setTokens(response.data.token, response.data.refreshToken);
+    }
+    
     return response.data;
   } catch (error) {
-    console.error('Phone verification failed:', error.message);
+    console.error('Login error:', error);
     throw error;
   }
 };
 
 /**
- * Reset a user's password
- * 
- * @param {Object} client - Axios client instance
- * @param {string} email - User's email address
- * @returns {Promise<Object>} Reset password result
+ * Logout from Pi Network
+ * @returns {Promise} The logout API response
  */
-const resetPassword = async (client, email) => {
+const logout = async () => {
   try {
-    const response = await client.post('/auth/reset-password', { email });
+    const response = await authClient.post('/auth/logout');
+    // Clear tokens regardless of response
+    clearTokens();
     return response.data;
   } catch (error) {
-    console.error('Password reset failed:', error.message);
+    // Still clear tokens even if the request fails
+    clearTokens();
+    console.error('Logout error:', error);
     throw error;
   }
 };
 
 /**
- * Log out the current user
- * 
- * @param {Object} client - Axios client instance
- * @returns {Promise<Object>} Logout result
+ * Check authentication status
+ * @returns {Promise} The auth status API response
  */
-const logout = async (client) => {
+const checkAuthStatus = async () => {
   try {
-    const response = await client.post('/auth/logout');
-    clearToken();
+    const response = await authClient.get('/auth/status');
     return response.data;
   } catch (error) {
-    console.error('Logout failed:', error.message);
-    // Clear token even if the request fails
-    clearToken();
+    console.error('Auth status check error:', error);
     throw error;
   }
 };
 
+// Export the client and authentication methods
 module.exports = {
-  getToken,
-  setToken,
-  clearToken,
+  authClient,
   login,
-  register,
-  verifyPhone,
-  resetPassword,
-  logout
+  logout,
+  checkAuthStatus,
+  setTokens,
+  clearTokens,
+  getAuthToken,
+  getRefreshToken,
+  refreshAuthToken,
+  BASE_API_URL
 };
-

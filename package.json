@@ -1,0 +1,39 @@
+{
+  "name": "pi-network-linux",
+  "version": "0.1.0",
+  "description": "An unofficial Pi Network client for Linux",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "electron-builder",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "pi",
+    "network",
+    "cryptocurrency",
+    "blockchain",
+    "linux",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.unofficial.pi-network-linux",
+    "productName": "Pi Network for Linux",
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "category": "Finance"
+    }
+  }
+}

@@ -4,13 +4,28 @@ const Store = require('electron-store');
 const axios = require('axios');
 
 // API endpoints
-const PI_API_BASE_URL = 'https://api.minepi.com';
+// Debug flag - set to true to enable verbose logging
+const DEBUG = true;
+
+// Debug logger function
+const debugLog = (label, data) => {
+  if (DEBUG) {
+    console.log(`[DEBUG-MAIN] ${label}:`, typeof data === 'object' ? JSON.stringify(data, null, 2) : data);
+  }
+};
+
+// IMPORTANT: This must match BASE_API_URL in src/api/auth.js
+// Ensure v2 is included in the URL as required by the Pi Network API
+const PI_API_BASE_URL = 'https://api.minepi.com/v2';
+debugLog('API Base URL', PI_API_BASE_URL);
+
 const PI_AUTH_ENDPOINTS = {
   login: `${PI_API_BASE_URL}/auth/login`,
   logout: `${PI_API_BASE_URL}/auth/logout`,
   refresh: `${PI_API_BASE_URL}/auth/refresh`,
   status: `${PI_API_BASE_URL}/auth/status`
 };
+debugLog('Auth Endpoints', PI_AUTH_ENDPOINTS);
 
 // Linux build doesn't need Windows-specific startup handling
 // if (require('electron-squirrel-startup')) {
@@ -145,56 +160,148 @@ ipcMain.handle('get-app-version', () => {
 
 // Handle login requests
 ipcMain.handle('auth-login', async (event, username, password) => {
+  debugLog('Login Request Received', { username });
+  
   try {
-    // In a real app, you would make an API call to Pi Network backend here
-    // For demonstration, we'll simulate a successful login with mock data
-    
-    // Make a real API call to Pi Network's authentication service
-    if (username && password) {
-      try {
-        // Call the Pi Network authentication API
-        const response = await axios.post(PI_AUTH_ENDPOINTS.login, {
-          username,
-          password
-        });
-        
-        // Extract authentication token and user data from response
-        const { token, refreshToken, expiresIn, user } = response.data;
-        
-        // Store the auth token, refresh token, expiry time and user data securely
-        store.set('authToken', token);
-        store.set('refreshToken', refreshToken);
-        store.set('tokenExpiry', Date.now() + (expiresIn * 1000));
-        store.set('user', user);
-        
-        // Update authentication state
-        isAuthenticated = true;
-        
-        return {
-          success: true,
-          user: user
-        };
-      } catch (error) {
-        console.error('Pi Network API login error:', error.response?.data || error.message);
-        
-        // Handle API error responses
-        const errorMessage = error.response?.data?.error || 'Authentication failed';
-        return {
-          success: false,
-          error: errorMessage
-        };
-      }
+    if (!username || !password) {
+      debugLog('Login Validation Failed', 'Missing username or password');
+      return {
+        success: false,
+        error: 'Username and password are required'
+      };
     }
     
-    return {
-      success: false,
-      error: 'Invalid credentials'
-    };
+    try {
+      // Prepare request configuration with detailed logging
+      const requestConfig = {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      debugLog('Login Endpoint', PI_AUTH_ENDPOINTS.login);
+      
+      // Log request details (excluding sensitive data)
+      const requestBody = { username, password: '********' };
+      debugLog('Login Request Body', requestBody);
+      
+      // Call the Pi Network authentication API
+      const response = await axios.post(PI_AUTH_ENDPOINTS.login, {
+        username,
+        password
+      }, requestConfig);
+      
+      debugLog('Login Response Status', response.status);
+      debugLog('Login Response Headers', response.headers);
+      
+      // Check if response contains expected data
+      if (!response.data || !response.data.token || !response.data.refreshToken) {
+        debugLog('Login Response Invalid', 'Missing token data in response');
+        return {
+          success: false,
+          error: 'Invalid response from authentication server'
+        };
+      }
+      
+      // Extract authentication token and user data from response
+      const { token, refreshToken, expiresIn, user } = response.data;
+      
+      // Log token details (partially obfuscated for security)
+      debugLog('Token Received', {
+        tokenPreview: token ? `${token.substring(0, 10)}...` : 'undefined',
+        refreshTokenPreview: refreshToken ? `${refreshToken.substring(0, 10)}...` : 'undefined',
+        expiresIn
+      });
+      
+      // Store the auth token, refresh token, expiry time and user data securely
+      store.set('authToken', token);
+      store.set('refreshToken', refreshToken);
+      
+      const expiryTime = Date.now() + (expiresIn * 1000);
+      store.set('tokenExpiry', expiryTime);
+      debugLog('Token Expiry Set', new Date(expiryTime).toISOString());
+      
+      if (user) {
+        store.set('user', user);
+        debugLog('User Data Stored', { 
+          username: user.username,
+          userId: user.id 
+        });
+      } else {
+        debugLog('User Data Warning', 'No user data in response');
+      }
+      
+      // Update authentication state
+      isAuthenticated = true;
+      debugLog('Auth State Updated', { isAuthenticated });
+      
+      return {
+        success: true,
+        user: user,
+        message: 'Authentication successful'
+      };
+    } catch (error) {
+      debugLog('Login API Error', 'Failed to authenticate with Pi Network');
+      
+      // Enhanced error logging
+      if (error.response) {
+        // The request was made but the server responded with an error
+        debugLog('Error Status', error.response.status);
+        debugLog('Error Headers', error.response.headers);
+        debugLog('Error Data', error.response.data);
+        
+        // Check for specific error codes
+        if (error.response.status === 401) {
+          debugLog('Auth Error', 'Invalid credentials (401)');
+        } else if (error.response.status === 429) {
+          debugLog('Rate Limit Error', 'Too many requests (429)');
+        }
+      } else if (error.request) {
+        // The request was made but no response received
+        debugLog('Network Error', 'No response received from server');
+        debugLog('Request Details', {
+          method: error.request.method,
+          path: error.request.path,
+          host: error.request.host
+        });
+      } else {
+        // Error in request setup
+        debugLog('Request Setup Error', error.message);
+      }
+      
+      // Handle API error responses with consistent formatting
+      let errorMessage = 'Authentication failed';
+      let errorDetails = null;
+      
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+          errorDetails = error.response.data.details || null;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
+      debugLog('Formatted Error Message', errorMessage);
+      
+      return {
+        success: false,
+        error: errorMessage,
+        details: errorDetails,
+        statusCode: error.response?.status
+      };
+    }
   } catch (error) {
+    // Unexpected errors outside the main try/catch
+    debugLog('Unexpected Login Error', error.message);
     console.error('Login error:', error);
+    
     return {
       success: false,
-      error: 'Authentication failed'
+      error: 'Authentication process failed',
+      message: error.message
     };
   }
 });

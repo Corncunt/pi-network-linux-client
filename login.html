@@ -165,7 +165,7 @@
                 } else {
                     // Show error message
                     const errorMessage = document.getElementById('error-message');
-                    errorMessage.textContent = result.message || 'Invalid username or password. Please try again.';
+                    errorMessage.textContent = result.message || result.error || 'Invalid username or password. Please try again.';
                     errorMessage.style.display = 'block';
                     
                     // Reset login button

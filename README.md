@@ -1,3 +1,185 @@
+# Pi Network Authentication Debugging Guide
+
+## 1. Overview of the Authentication Flow
+
+The Pi Network Linux client uses a multi-step authentication process to securely connect to the Pi Network servers:
+
+1. **Initial Authentication**: 
+   - The user enters credentials (username/password) in the login form
+   - These credentials are sent to the Pi Network API endpoint (either `/auth/login` or `/v2/auth/login`)
+   - On success, the server returns an access token and refresh token
+
+2. **Token Management**:
+   - The access token is stored and used for subsequent API requests
+   - The token is included in the `Authorization: Bearer <token>` header
+   - Tokens have a limited lifespan and must be refreshed periodically
+
+3. **Token Refresh Process**:
+   - When the access token expires, requests receive a 401 Unauthorized response
+   - The refresh token is used to obtain a new access token without requiring re-login
+   - If the refresh token is also expired, the user must log in again
+
+4. **Request Interceptors**:
+   - The application uses Axios interceptors to automatically:
+     - Add the authentication token to outgoing requests
+     - Handle token refresh when receiving 401 responses
+     - Retry the original request with the new token
+
+## 2. Common Authentication Issues
+
+Several issues can affect the Pi Network authentication process:
+
+### API Endpoint Mismatches
+- Incorrect API base URL (should be `https://api.minepi.com/v2`)
+- Path inconsistencies between different parts of the codebase
+- API version misalignment (e.g., using `/auth/login` instead of `/v2/auth/login`)
+
+### Request Formatting Problems
+- Incorrect Content-Type headers (should be `application/json`)
+- Malformed JSON in the request body
+- Missing or incorrect parameters (username, password, etc.)
+
+### Token Handling Issues
+- Improper storage of tokens causing them to be lost between sessions
+- Failure to include the token in the Authorization header
+- Incorrect token refresh implementation
+
+### Error Handling Deficiencies
+- Inconsistent error response parsing
+- Missing error messages in the UI
+- Failure to detect and handle network connectivity issues
+
+## 3. How to Use the Debugging Tools
+
+We've created two specialized tools to help debug authentication issues:
+
+### test-auth.js - Command Line Testing Tool
+
+This tool allows direct testing of the Pi Network authentication endpoints:
+
+```bash
+# Basic usage
+node test-auth.js --username yourusername --password yourpassword
+
+# With verbose logging
+node test-auth.js --username yourusername --password yourpassword --verbose
+
+# Get help about available options
+node test-auth.js --help
+```
+
+Key features:
+- Tests both potential API endpoints (`/auth/login` and `/v2/auth/login`)
+- Provides detailed request and response information
+- Logs all data for later analysis
+
+### debug-auth.js - Interactive Debugging Tool
+
+This more sophisticated tool provides an interactive experience:
+
+```bash
+# Basic usage
+node debug-auth.js
+
+# With verbose logging
+node debug-auth.js --verbose
+
+# Save working credentials for later testing
+node debug-auth.js --save
+```
+
+Key features:
+- Interactive prompts for credentials (better security)
+- Tests multiple endpoints and configurations
+- Option to save working credentials locally
+- Provides tailored troubleshooting recommendations
+- Creates detailed log files with timestamp
+
+### Using the Developer Tools
+
+When running the app in development mode:
+
+```bash
+npm run dev
+```
+
+1. Press `Ctrl+Shift+I` to open the DevTools console
+2. Filter the logs by typing "[DEBUG]" in the console filter
+3. Watch for authentication-related messages and errors
+
+## 4. Troubleshooting the API Connection
+
+Follow this systematic approach to diagnose authentication issues:
+
+### Step 1: Verify API Endpoints
+Use the debug-auth.js tool to determine the correct endpoint:
+```bash
+node debug-auth.js --verbose
+```
+
+Look for:
+- Which endpoint returns a successful response
+- Any specific error messages from the server
+- HTTP status codes (401, 404, 500, etc.)
+
+### Step 2: Check Request Format
+Examine the verbose logs to ensure:
+- Correct Content-Type headers
+- Properly formatted JSON payload
+- All required parameters are included
+
+### Step 3: Network Connectivity
+- Ensure you can reach api.minepi.com from your network
+- Try from different networks (switch between Wi-Fi and cellular)
+- Check if a proxy or VPN is interfering with the connection
+
+### Step 4: Account Status
+- Verify your Pi Network credentials work in the official app
+- Check if your account has security measures like 2FA enabled
+- Ensure your account is in good standing (not locked or restricted)
+
+### Step 5: Application Configuration
+- Check for environment variables that might override API settings
+- Ensure the local storage is functioning properly
+- Verify the Electron app has proper permissions
+
+## 5. Next Steps for Implementation
+
+Once you've identified the correct endpoint and authentication flow:
+
+### 1. Standardize API URLs
+Update all files to use the correct base URL and endpoints:
+- main.js
+- src/api/auth.js
+- Any other files making API calls
+
+### 2. Implement Robust Error Handling
+- Add specific error messages for different failure scenarios
+- Ensure the UI properly displays these messages
+- Log errors with enough context for debugging
+
+### 3. Enhance Token Management
+- Implement secure storage of tokens
+- Ensure proper token refresh logic
+- Add token validation checks
+
+### 4. Add Comprehensive Logging
+- Include timestamps and request IDs
+- Log important events without exposing sensitive data
+- Create a way to enable/disable verbose logging
+
+### 5. Implement Retry Logic
+- Add exponential backoff for failed requests
+- Handle network interruptions gracefully
+- Provide feedback to the user during long operations
+
+### 6. Testing and Validation
+- Create automated tests for the authentication flow
+- Test edge cases (network drops, server errors, etc.)
+- Verify all API interactions work correctly
+
+By following these steps, you should be able to resolve authentication issues and ensure a reliable connection to the Pi Network API.
+
 # Pi Network API Integration
 
 ## Overview
